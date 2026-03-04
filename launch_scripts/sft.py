@@ -110,7 +110,7 @@ VIDEO_ACADEMIC_DATASETS = [
     "video_localized_narratives_caption",
     "qv_highlights",
 
-    # No captions since we put this in the `demo` group
+    # No captions sincze we put this in the `demo` group
 
     # our QA
     "vixmo_syn_video_capqa_v2",  # 200K general qa
@@ -301,6 +301,10 @@ def get_training_mixture(name):
             ], 0.1],
             ["nlp", ["tulu4"], 0.1 - hardcode_weight],
             ["hardcodes", ["molmo2_hardcodes"], hardcode_weight]
+        ]
+    elif name == "videocapqa":
+        training_mixture = [
+            ["videocapqa", ["molmo2_syn_captions_qa"], 1.0],
         ]
     else:
         raise NotImplementedError(name)

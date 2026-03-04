@@ -499,11 +499,17 @@ class Molmo2SynCaptionsQA(DatasetBase):
         for row in ds:
             video2qas[row["video_id"]].append(row)
 
+        # Load Google Cloud Storage URL mapping
+        mapping_path = "/Users/andrasferenczy/Desktop/Code/IR/molmo2/olmo/data/youtube_id_to_urls_mapping.json"
+        with open(mapping_path, "r") as f:
+            video_url_mapping = json.load(f)
+
         data = []
         for video_id, qas in video2qas.items():
-            video_path = _find_video_by_id(
-                self.VIDEO_DIR, video_id, self.VIDEO_DOWNLOAD_INSTRUCTIONS
-            )
+            if video_id not in video_url_mapping:
+                print(f"Video ID {video_id} not found in mapping")
+                continue
+            video_path = video_url_mapping[video_id]["gcp_url"]
             msgs = []
             for qa in qas:
                 answer = qa["Answer"]
