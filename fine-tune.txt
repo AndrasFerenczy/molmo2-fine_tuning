@@ -1,0 +1,44 @@
+ssh agf64@unicorn-login-01.coecis.cornell.edu
+
+
+# Show nodes with available GPUs (idle or partially used)
+sinfo -o "%N %G %m %c %t" -t idle
+
+# Check if any A100s are available
+sinfo -o "%N %G %m %c %t" -t idle,mix | grep -i a100
+
+# Check if any H100s are available
+sinfo -o "%N %G %m %c %t" -t idle,mix | grep -i h100
+
+for node in $(sinfo -N -o "%N %G" | grep -i B200 | awk '{print $1}' | sort -u); do
+  echo "=== $node ==="
+  scontrol show node $node | grep -E "Gres=|AllocTRES="
+done
+
+
+salloc --mem=150g --gres=gpu:nvidia_rtx_a6000:1 --cpus-per-task=12 -t 12:00:00 --exclude=lil-compute-05,lil-compute-04
+salloc --mem=100g --gres=gpu:nvidia_rtx_a6000:1 --cpus-per-task=32 -t 4:00:00 --exclude=lil-compute-05
+
+# Cancel both pending jobs
+squeue -u $USER
+scancel 358858 464479
+
+
+#!/bin/bash
+
+export LD_PRELOAD=/lib/x86_64-linux-gnu/libgcc_s.so.1
+export LD_PRELOAD=/lib/x86_64-linux-gnu/libglib-2.0.so.0:/lib/x86_64-linux-gnu/libgobject-2.0.so.0:/lib/x86_64-linux-gnu/libgcc_s.so.1
+
+
+MOLMO_DATA_DIR=/home/agf64/molmo2-fine_tuning/fine-tuning \
+WANDB_API_KEY=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 \
+torchrun --nproc-per-node=1 /home/agf64/molmo2-fine_tuning/launch_scripts/sft.py \
+  /home/agf64/molmo2-fine_tuning/fine-tuning/Molmo2-4B/step2000 videocapqa \
+  --save_folder=/home/agf64/molmo2-fine_tuning/results \
+  --wandb.name=molmo2-videocapqa-sft --wandb.entity=agf64-cornell-university --wandb.project=molmo2 \
+  --device_batch_size=1 --global_train_batch_size=32 \
+  --seq_len=4096
+
+
+  torchrun --nproc-per-node=1 /home/agf64/molmo2-fine_tuning/launch_scripts/sft.py \
+  /home/agf64/molmo2-fine_tuning/fine-tuning/Molmo2-4B/step2000 debug --debug  --save_folder=/home/agf64/molmo2-fine_tuning/results --save_overwrite

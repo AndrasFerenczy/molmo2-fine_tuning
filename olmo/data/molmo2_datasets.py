@@ -381,7 +381,20 @@ def _find_video_by_id(video_dir, video_id, download_instructions):
 
     # On-demand lookup: check each subdir for this video_id
     for subdir in YOUTUBE_SUBDIRS:
+        print(video_dir, subdir, video_id)
         video_folder = join(video_dir, subdir, video_id)
+        
+        # Check flat structure first (handles the direct dump method)
+        for ext in (".mp4", ".mov", ".mkv", ".webm"):
+            flat_file = f"{video_id}{ext}"
+            flat_path = join(video_dir, flat_file)
+            if exists(flat_path):
+                # Cache the relative path for portability
+                cache[video_id] = flat_file
+                _cache_modified.add(video_dir)
+                return flat_path
+
+        # If not found flat, try the nested layout standard
         if exists(video_folder):
             try:
                 for f in os.listdir(video_folder):
@@ -396,7 +409,7 @@ def _find_video_by_id(video_dir, video_id, download_instructions):
 
     raise FileNotFoundError(
         f"Video not found for video_id={video_id}. "
-        f"Looked in: {video_dir}/{{youtube-cc-exist,youtube-cc-kw,youtube-cc-temporal}}/{video_id}/\n"
+        f"Looked in: {video_dir}/ (flat) and {video_dir}/{{youtube-cc-exist,youtube-cc-kw,youtube-cc-temporal}}/{video_id}/\n"
         f"{download_instructions}"
     )
 
@@ -473,7 +486,7 @@ def _find_video_point_path_by_id(video_dir, video_id, video_source):
 
 class Molmo2SynCaptionsQA(DatasetBase):
     HF_SOURCE = "allenai/Molmo2-VideoCapQA"
-    HF_SPLIT = "CapQA"
+    HF_SPLIT = "CapQA[:5%]"
     LOCAL_NAME = "Molmo2-VideoCapQA"
     VIDEO_DIR = join(VIDEO_DATA_HOME, "youtube-cc") if VIDEO_DATA_HOME else None
     VIDEO_DOWNLOAD_INSTRUCTIONS = (
@@ -499,17 +512,11 @@ class Molmo2SynCaptionsQA(DatasetBase):
         for row in ds:
             video2qas[row["video_id"]].append(row)
 
-        # Load Google Cloud Storage URL mapping
-        mapping_path = "/Users/andrasferenczy/Desktop/Code/IR/molmo2/olmo/data/youtube_id_to_urls_mapping.json"
-        with open(mapping_path, "r") as f:
-            video_url_mapping = json.load(f)
-
         data = []
         for video_id, qas in video2qas.items():
-            if video_id not in video_url_mapping:
-                print(f"Video ID {video_id} not found in mapping")
-                continue
-            video_path = video_url_mapping[video_id]["gcp_url"]
+            video_path = _find_video_by_id(
+                self.VIDEO_DIR, video_id, self.VIDEO_DOWNLOAD_INSTRUCTIONS
+            )
             msgs = []
             for qa in qas:
                 answer = qa["Answer"]
@@ -530,6 +537,7 @@ class Molmo2SynCaptionsQA(DatasetBase):
                 "message_list": msgs,
             })
         return data
+
 
     def get(self, idx, rng):
         return self.data[idx]

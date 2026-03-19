@@ -21,7 +21,7 @@ numpy_to_torch_dtype_dict = {
     np.dtype("float64"): torch.float64,
     np.dtype("complex64"): torch.complex64,
     np.dtype("complex128"): torch.complex128,
-    np.bool: torch.bool,
+    np.bool_: torch.bool,
     np.uint8: torch.uint8,
     np.int8: torch.int8,
     np.int16: torch.int16,
