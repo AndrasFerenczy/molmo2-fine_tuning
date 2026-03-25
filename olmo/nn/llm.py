@@ -51,7 +51,6 @@ def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
         .reshape(bs, slen, n_kv_heads * n_rep, head_dim)
     )
 
-
 class LayerNormType(StrEnum):
     default = "default"
     """
@@ -684,6 +683,7 @@ class LlmConfig(BaseConfig):
                 log.warning(f"Removing deprecated '{key}' key from {cls.__name__}.")
                 del config[key]
         return config
+
 
 class Llm(nn.Module):
     def __init__(self, config: LlmConfig, cache, device):
@@ -2138,8 +2138,9 @@ class OLMoEBlock(OLMoBlock):
             # Activation checkpointing for the MoE FFN is not supported
             return og_x + self.dropout(self.ffn(x), drop_mask=drop_mask), cache
 
-
 class OLMoSequentialBlock(OLMoBlock):
+
+
     """
     This is a typical transformer block where the output is computed as ``MLP(LN(x + Attention(LN(x))))``
     (plus another skip connection).
@@ -2276,8 +2277,6 @@ class OLMoSequentialBlock(OLMoBlock):
         x = og_x + x
 
         return x, cache
-
-
 class OLMoLlamaBlock(OLMoBlock):
     """
     This is a transformer block where the output is computed as ``MLP(LN(x + Attention(LN(x))))``

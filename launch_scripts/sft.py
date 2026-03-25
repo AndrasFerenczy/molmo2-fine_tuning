@@ -1,3 +1,4 @@
+import torchcodec
 import argparse
 import dataclasses
 from dataclasses import asdict
@@ -429,7 +430,7 @@ def main():
             allow_resume=False,
             finish_on_sigterm=True
         ),
-        compile=CompilerConfig(mode="default", dynamic=False),
+        compile=None,
         fused_loss=False,
         allow_resume=True,
         model=model_cfg,
