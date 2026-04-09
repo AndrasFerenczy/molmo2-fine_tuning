@@ -37,7 +37,20 @@ from olmo.tokenizer import TokenizerConfig
 from olmo.torch_util import ensure_finite_, BufferCache, get_global_rank, barrier, synchronize_value
 from olmo.util import resource_path, rank0_resource_path, split_into_groups
 
+
 log = logging.getLogger(__name__)
+
+try:
+    from gumbel_model.attention.my_triton_biased_flash_attention import gumbel_sliding_attention as triton_gumbel_sliding_attention
+except Exception:
+    triton_gumbel_sliding_attention = None
+
+try:
+    import gumbel_model.gumbel_beacons.ops as gumbel_beacon_ops
+    from gumbel_model.utils.gumbel_sigmoid import gumbel_sigmoid
+except Exception:
+    gumbel_beacon_ops = None
+    gumbel_sigmoid = None
 
 
 def repeat_kv(x: torch.Tensor, n_rep: int) -> torch.Tensor:
@@ -442,6 +455,47 @@ class LlmConfig(BaseConfig):
     attention_dropout: float = 0.0
     """
     The dropout probability within the attention modules.
+    """
+
+    gumbel_window_size: int = 64
+    """
+    Sliding window size for Gumbel-Beacon attention when using `OLMoGumbelBlock`.
+    Assumes interleaved 2T sequences (normal/beacon/normal/...).
+    """
+
+    gumbel_apply_minimum_window_normals: bool = False
+    """
+    If true, zero normal-key bias inside the sliding window (matches gumbel-beacons `apply_minimum_window_normals`).
+    """
+
+    gumbel_can_see_since_last_beacon: bool = False
+    """
+    If true, apply prefix-derived bias so normal tokens cannot attend across beacons (since-last-beacon segments).
+    """
+
+    gumbel_enable_triton_attention: bool = True
+    """
+    If true, `OLMoGumbelBlock` requires the Triton gumbel sliding attention kernel to be available.
+    """
+
+    gumbel_warp_specialize: bool = True
+    """
+    Triton kernel tuning knob for gumbel sliding attention.
+    """
+
+    gumbel_tau: float = 1.0
+    """
+    Gumbel-Sigmoid temperature for beacon decisions.
+    """
+
+    gumbel_stochastic_eval_decisions: bool = True
+    """
+    If true, eval hard decisions mirror train-time hard Gumbel sampling.
+    """
+
+    gumbel_decision_head_bias_init: float = 0.0
+    """
+    Initial bias added to beacon decision logits (per head). Set this to tune initial keep/drop rate.
     """
 
     attention_layer_norm: bool = False
@@ -2004,6 +2058,12 @@ class OLMoGumbelBlock(OLMoBlock):
             bias=config.include_bias or config.qkv_bias,
             device=device
         )
+
+        self.beacon_head_weight = nn.Parameter(torch.empty(config.n_heads, self.head_dim, device=device))
+        self.beacon_head_bias = nn.Parameter(torch.zeros(config.n_heads, device=device), requires_grad=False)
+        self._last_beacon_alphas_hard: Optional[torch.Tensor] = None
+        self._last_beacon_alphas_soft: Optional[torch.Tensor] = None
+
         # Feed-forward input projection.
         self.ff_proj = nn.Linear(
             config.d_model, self.hidden_size, bias=config.include_bias, device=device)
@@ -2019,6 +2079,9 @@ class OLMoGumbelBlock(OLMoBlock):
         init_weights(
             self.config, self.ff_proj, d=self.config.d_model, layer_id=None, type_of_module=ModuleType.in_module
         )
+        nn.init.normal_(self.beacon_head_weight, std=self.config.initializer_range)
+        with torch.no_grad():
+            self.beacon_head_bias.fill_(float(self.config.gumbel_decision_head_bias_init))
 
     def forward(
             self,
@@ -2033,14 +2096,39 @@ class OLMoGumbelBlock(OLMoBlock):
             pos_cos: Optional[torch.Tensor] = None,
             freqs_cis: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, Optional[Tuple[torch.Tensor, torch.Tensor]]]:
-        # Get query, key, value projections.
-        # shape:
-        #  - for regular attn q, k, v: (batch_size, seq_len, d_model)
-        #  - for multi-query attn q: (batch_size, seq_len, d_model)
-        #                      k, v: (batch_size, seq_len, d_model // n_heads)
-        #  - for group query attn q: (batch_size, seq_len, d_model)
-        #                      k, v: (batch_size, seq_len, d_model // n_kv_heads)
-        enable_cp = getattr(self, '_cp_enabled', False) and not use_cache
+
+        # NOTE: This block assumes `x` is already a doubled (2T) interleaved sequence:
+        # (normal_0, beacon_0, normal_1, beacon_1, ...).
+        #
+        # Only the dense Triton gumbel sliding attention path is implemented for now.
+        # TODO: add the beacons in llm.py?
+        B, two_t, C = x.shape
+        if two_t % 2 != 0:
+            raise ValueError(f"Expected doubled sequence length 2T, got T={two_t}.")
+        if (self.config.n_heads * self.head_dim) != self.config.d_model:
+            raise RuntimeError(
+                "OLMoGumbelBlock currently requires `n_heads * head_dim == d_model` "
+                "so beacon decisions can be computed per-head from the hidden state."
+            )
+        if use_cache or layer_past is not None:
+            raise NotImplementedError("OLMoGumbelBlock does not yet support KV caching / `layer_past`.")
+        if getattr(self, '_cp_enabled', False):
+            raise NotImplementedError("OLMoGumbelBlock does not yet support context parallelism.")
+        if attention_bias is not None:
+            raise NotImplementedError("OLMoGumbelBlock does not yet support external `attention_bias`.")
+        if value_scaling is not None:
+            raise NotImplementedError("OLMoGumbelBlock does not yet support `value_scaling`.")
+        if not x.is_cuda:
+            raise RuntimeError("OLMoGumbelBlock Triton attention requires CUDA tensors.")
+        if self.config.attention_dropout != 0.0:
+            raise RuntimeError("OLMoGumbelBlock Triton attention requires `attention_dropout == 0.0`.")
+        if not self.config.gumbel_enable_triton_attention:
+            raise RuntimeError("OLMoGumbelBlock requires `gumbel_enable_triton_attention=True`.")
+        if triton_gumbel_sliding_attention is None:
+            raise RuntimeError("Triton gumbel sliding attention kernel is not available.")
+        if gumbel_beacon_ops is None or gumbel_sigmoid is None:
+            raise RuntimeError("Gumbel beacon utilities are not available.")
+
         if not self.config.norm_after:
             if self.fine_grained_checkpoint_fn is not None:
                 atten_in = self.fine_grained_checkpoint_fn(self.attn_norm, x)
@@ -2055,32 +2143,111 @@ class OLMoGumbelBlock(OLMoBlock):
 
         q, k, v = qkv.split(self.fused_dims, dim=-1)
 
-        if enable_cp:
-            att, cache = self.cp_attention(
-                q,
-                k,
-                v,
-                position_ids=position_ids,
-                pos_sin=pos_sin,
-                pos_cos=pos_cos,
-                freqs_cis=freqs_cis,
-                attention_bias=attention_bias,
-                layer_past=layer_past,
-                use_cache=use_cache,
+        # Optionally apply layer norm to keys and queries (QK-norm), matching `OLMoBlock.attention`.
+        dtype = k.dtype
+        if (
+                self.q_norm is not None
+                and self.k_norm is not None
+                and self.config.attention_layer_norm_type != AttentionLayerNormType.qwen3
+        ):
+            q = self.q_norm(q).to(dtype=dtype)
+            k = self.k_norm(k).to(dtype=dtype)
+
+        q = q.view(B, two_t, self.config.n_heads, self.head_dim)
+        k = k.view(B, two_t, self.config.effective_n_kv_heads, self.head_dim)
+        if (
+                self.q_norm is not None
+                and self.k_norm is not None
+                and self.config.attention_layer_norm_type == AttentionLayerNormType.qwen3
+        ):
+            q = self.q_norm(q).to(dtype=dtype)
+            k = self.k_norm(k).to(dtype=dtype)
+        q = q.transpose(1, 2)
+        k = k.transpose(1, 2)
+        v = v.view(B, two_t, self.config.effective_n_kv_heads, self.head_dim).transpose(1, 2)
+
+        #TODO: positional embeddings
+        if self.config.rope:
+            # Apply rotary embeddings (OLMo-style; `freqs_cis`/`pos_sin`/`pos_cos` intentionally unused here).
+            q, k = self.rotary_emb(q, k, position_ids=position_ids, cp_enabled=False)
+
+        # Expand KV heads to match Q heads if using GQA/MQA.
+        num_kv_heads = k.size(1)
+        num_q_heads = q.size(1)
+        if num_q_heads != num_kv_heads:
+            if num_q_heads % num_kv_heads != 0:
+                raise ValueError(f"n_heads ({num_q_heads}) must be divisible by n_kv_heads ({num_kv_heads}).")
+            rep = num_q_heads // num_kv_heads
+            k = k.repeat_interleave(rep, dim=1)
+            v = v.repeat_interleave(rep, dim=1)
+
+        # Cast attention operands to a Triton-friendly dtype.
+        if q.dtype not in (torch.float16, torch.bfloat16):
+            q = q.to(torch.bfloat16)
+            k = k.to(torch.bfloat16)
+            v = v.to(torch.bfloat16)
+
+        # --- Beacon decisions (computed on beacon positions only) ---
+        x_beacon_BxTxC = atten_in[:, 1::2, :].contiguous()
+        x_beacon_BxTxHxD = x_beacon_BxTxC.view(B, -1, self.config.n_heads, self.head_dim)
+        decision_logits_BxTxH = torch.einsum("bthd,hd->bth", x_beacon_BxTxHxD, self.beacon_head_weight) + self.beacon_head_bias
+        sample = gumbel_sigmoid(
+            decision_logits_BxTxH,
+            tau=float(self.config.gumbel_tau),
+            stochastic=bool(self.training or self.config.gumbel_stochastic_eval_decisions),
+            uniforms=None,
+        )
+        alphas_hard_BxHxT = sample.hard.permute(0, 2, 1).contiguous()
+        alphas_soft_BxHxT = sample.soft.permute(0, 2, 1).contiguous()
+        z_BxTxH = sample.pre_sigmoid
+
+        if self.training:
+            log_alphas_BxHxT = F.logsigmoid(z_BxTxH).permute(0, 2, 1).contiguous()
+        else:
+            neg_inf = torch.full_like(alphas_hard_BxHxT, float("-inf"))
+            zero = torch.zeros_like(alphas_hard_BxHxT)
+            log_alphas_BxHxT = torch.where(alphas_hard_BxHxT > 0.5, zero, neg_inf)
+
+        # --- Prefix bias for since-last-beacon masking (optional) ---
+        use_exact_segment_mask = False
+        if self.config.gumbel_can_see_since_last_beacon:
+            use_exact_segment_mask = not self.training
+            if use_exact_segment_mask:
+                prefix_log_BxHxT = gumbel_beacon_ops.compute_segment_id_prefix_BxHxT(alphas_hard_BxHxT)
+            else:
+                prefix_log_BxHxT = gumbel_beacon_ops.compute_log_prob_no_beacon_prefix_BxHxT(alphas_soft_BxHxT)
+        else:
+            prefix_log_BxHxT = torch.zeros(
+                (B, self.config.n_heads, two_t // 2),
+                device=q.device,
+                dtype=log_alphas_BxHxT.dtype,
             )
 
-        else:
-            # Get attention scores.
-            if self.fine_grained_checkpoint_fn is not None:
-                att, cache = self.fine_grained_checkpoint_fn(  # type: ignore
-                    self.attention, q, k, v, attention_bias, position_ids=position_ids,
-                    drop_mask=drop_mask, layer_past=layer_past, use_cache=use_cache,
-                    value_scaling=value_scaling
-                )
-            else:
-                att, cache = self.attention(
-                    q, k, v, attention_bias, position_ids=position_ids, drop_mask=drop_mask,
-                    layer_past=layer_past, use_cache=use_cache, value_scaling=value_scaling)
+        # Save alphas for later plumbing (losses/stats are out of scope for this block).
+        self._last_beacon_alphas_hard = alphas_hard_BxHxT
+        self._last_beacon_alphas_soft = alphas_soft_BxHxT
+
+        # Triton fused attention with gumbel sliding bias.
+        #TODO: document idx creation / handling
+        sm_scale = 1.0 / math.sqrt(q.shape[-1])
+        att = triton_gumbel_sliding_attention(
+            q,
+            k,
+            v,
+            sm_scale,
+            prefix_log_BxHxT,
+            log_alphas_BxHxT,
+            int(self.config.gumbel_window_size),
+            bool(self.config.gumbel_apply_minimum_window_normals),
+            has_prefix_bias=bool(self.config.gumbel_can_see_since_last_beacon),
+            warp_specialize=bool(self.config.gumbel_warp_specialize),
+            documents_idx_BxT=None,
+            use_exact_segment_mask=use_exact_segment_mask,
+        )
+        att = att.transpose(1, 2).contiguous().view(B, two_t, self.config.n_heads * self.head_dim)
+        att = att.to(self.attn_out.weight.dtype)
+        att = self.attn_out(att)
+        cache = None
 
         if self.config.norm_after:
             if self.fine_grained_checkpoint_fn is not None:
@@ -2119,8 +2286,6 @@ class OLMoGumbelBlock(OLMoBlock):
         x = og_x + x
 
         return x, cache
-
-
 
 class OLMoSequentialBlock(OLMoBlock):
     """
@@ -2260,7 +2425,6 @@ class OLMoSequentialBlock(OLMoBlock):
         x = og_x + x
 
         return x, cache
-
 
 class OLMoEBlock(OLMoBlock):
     """
