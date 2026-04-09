@@ -10,15 +10,15 @@ import torch
 from torch import Tensor
 import torch.nn as nn
 from torch.nn import functional as F
-import modeling.models.utils.gumbel_sigmoid as gumbel_sigmoid_utils
-from modeling.models.full_attention_model import IGNORE_INDEX, ModelConfig
+import gumbel_model.utils.gumbel_sigmoid as gumbel_sigmoid_utils
+from gumbel_model.full_attention_model import IGNORE_INDEX, ModelConfig
 
-from modeling.models.utils.dmc_accumulation import (
+from gumbel_model.utils.dmc_accumulation import (
     dmc_exact_accumulation as util_dmc_exact_accumulation,
     dmc_exact_accumulation_torch as util_dmc_exact_accumulation_torch,
 )
-from modeling.models.utils.sampling import sample_next_token
-from modeling.models.utils.segmented_ops import (
+from gumbel_model.utils.sampling import sample_next_token
+from gumbel_model.utils.segmented_ops import (
     is_doc_start_from_doc_idx,
     segmented_cumsum,
     doc_relative_positions,
@@ -26,7 +26,7 @@ from modeling.models.utils.segmented_ops import (
     masked_per_document_count,
 )
 
-from modeling.models.model import (
+from gumbel_model.model import (
     RMSNorm,
     MLP,
     compute_left_padded_position_ids,
@@ -42,7 +42,7 @@ import math
 import inspect
 
 try:
-    from modeling.models.attention.triton_keybias_flash_attention import keybias_attention as triton_keybias_attention
+    from gumbel_model.attention.triton_keybias_flash_attention import keybias_attention as triton_keybias_attention
 except Exception:
     triton_keybias_attention = None
 

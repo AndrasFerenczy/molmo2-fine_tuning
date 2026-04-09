@@ -9,11 +9,11 @@ import torch
 from torch import Tensor
 from torch.nn import functional as F
 
-from modeling.models.model import apply_rotary_emb, infer_is_real_tokens, validate_left_padded_tokens
-from modeling.models.utils.decode_attention import KVSegment, masked_kv_attention
-import modeling.models.utils.gumbel_sigmoid as gumbel_sigmoid_utils
-from modeling.models.utils.sampling import sample_next_token
-from modeling.models.utils.segmented_ops import (
+from gumbel_model.model import apply_rotary_emb, infer_is_real_tokens, validate_left_padded_tokens
+from gumbel_model.utils.decode_attention import KVSegment, masked_kv_attention
+import gumbel_model.utils.gumbel_sigmoid as gumbel_sigmoid_utils
+from gumbel_model.utils.sampling import sample_next_token
+from gumbel_model.utils.segmented_ops import (
     doc_relative_positions,
     is_doc_start_from_doc_idx,
     masked_global_margin_clamped_excess,

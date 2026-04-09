@@ -8,16 +8,16 @@ import torch
 from torch import Tensor
 import torch.nn as nn
 
-from modeling.models.model import ModelConfig
-from modeling.models.full_attention_model import (
+from gumbel_model.model import ModelConfig
+from gumbel_model.full_attention_model import (
     MLP,
     RMSNorm,
     Model,
     TritonFullAttention,
     triton_keybias_attention,
 )
-from modeling.masking import sliding_window_mask_factory_method
-from modeling.models.utils.segmented_ops import (
+from gumbel_model.utils.masking import sliding_window_mask_factory_method
+from gumbel_model.utils.segmented_ops import (
     global_margin_clamped_excess,
     doc_relative_positions,
     is_doc_start_from_doc_idx,

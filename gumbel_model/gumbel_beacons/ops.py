@@ -8,7 +8,7 @@ from typing import Callable
 import torch
 from torch import Tensor
 from torch.nn import functional as F
-from modeling.models.utils.segmented_ops import (
+from gumbel_model.utils.segmented_ops import (
     doc_relative_positions,
     segmented_cumsum,
     segmented_logcumsumexp,

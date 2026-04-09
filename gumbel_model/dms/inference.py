@@ -10,11 +10,11 @@ import torch
 from torch import Tensor
 from torch.nn import functional as F
 
-import modeling.models.utils.gumbel_sigmoid as gumbel_sigmoid_utils
-from modeling.models.full_attention_model import IGNORE_INDEX
-from modeling.models.model import apply_rotary_emb, infer_is_real_tokens, validate_left_padded_tokens
-from modeling.models.utils.decode_attention import KVSegment, masked_kv_attention
-from modeling.models.utils.sampling import sample_next_token
+import gumbel_model.utils.gumbel_sigmoid as gumbel_sigmoid_utils
+from gumbel_model.full_attention_model import IGNORE_INDEX
+from gumbel_model.model import apply_rotary_emb, infer_is_real_tokens, validate_left_padded_tokens
+from gumbel_model.utils.decode_attention import KVSegment, masked_kv_attention
+from gumbel_model.utils.sampling import sample_next_token
 
 
 class GumbelDMSInferenceMixin:

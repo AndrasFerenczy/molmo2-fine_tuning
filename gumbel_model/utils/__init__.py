@@ -1,5 +1,5 @@
-from modeling.models.utils.dmc_accumulation import dmc_exact_accumulation
-from modeling.models.utils.segmented_ops import (
+from gumbel_model.utils.dmc_accumulation import dmc_exact_accumulation
+from gumbel_model.utils.segmented_ops import (
     is_doc_start_from_doc_idx,
     segmented_cumsum,
     doc_relative_positions,

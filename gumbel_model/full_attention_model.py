@@ -13,10 +13,10 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 from torch.nn.attention.flex_attention import flex_attention, create_block_mask, and_masks
-from modeling.masking import causal_mask, document_mask_factory_method, left_padding_mask_factory_method, get_mask_mod_w_offset, cached_tokens_padding_mask_factory_method
+from gumbel_model.utils.masking import causal_mask, document_mask_factory_method, left_padding_mask_factory_method, get_mask_mod_w_offset, cached_tokens_padding_mask_factory_method
 
 # Import shared components from model.py
-from modeling.models.model import (
+from gumbel_model.model import (
     RMSNorm,
     Block,
     CausalSelfAttention,
@@ -30,10 +30,10 @@ from modeling.models.model import (
     IGNORE_INDEX,
     validate_left_padded_tokens,
 )
-from modeling.models.utils.sampling import sample_next_token
+from gumbel_model.utils.sampling import sample_next_token
 
 try:
-    from modeling.models.attention.triton_keybias_flash_attention import keybias_attention as triton_keybias_attention
+    from gumbel_model.attention.triton_keybias_flash_attention import keybias_attention as triton_keybias_attention
 except Exception:
     triton_keybias_attention = None
 

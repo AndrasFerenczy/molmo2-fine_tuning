@@ -26,7 +26,7 @@ from torch import Tensor
 from torch.nn import functional as F
 
 from torch.nn.attention.flex_attention import flex_attention, create_block_mask, and_masks
-from modeling.masking import causal_mask, document_mask_factory_method, get_mask_mod_w_offset, left_padding_mask_factory_method
+from gumbel_model.utils.masking import causal_mask, document_mask_factory_method, get_mask_mod_w_offset, left_padding_mask_factory_method
 
 from typing import Optional, Tuple, Callable
 

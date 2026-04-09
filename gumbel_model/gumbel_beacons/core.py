@@ -32,7 +32,7 @@ from gumbel_model.utils.segmented_ops import (
 from . import ops as gumbel_ops
 
 try:
-    from modeling.models.attention.triton_biased_flash_attention import gumbel_sliding_attention as triton_gumbel_sliding_attention
+    from gumbel_model.attention.triton_biased_flash_attention import gumbel_sliding_attention as triton_gumbel_sliding_attention
 except Exception:
     triton_gumbel_sliding_attention = None
 

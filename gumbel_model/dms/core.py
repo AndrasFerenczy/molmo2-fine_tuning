@@ -12,9 +12,9 @@ import torch.nn as nn
 from torch import Tensor
 from torch.nn import functional as F
 
-import modeling.models.utils.gumbel_sigmoid as gumbel_sigmoid_utils
-from modeling.models.full_attention_model import IGNORE_INDEX, ModelConfig
-from modeling.models.model import (
+import gumbel_model.utils.gumbel_sigmoid as gumbel_sigmoid_utils
+from gumbel_model.full_attention_model import IGNORE_INDEX, ModelConfig
+from gumbel_model.model import (
     MLP,
     RMSNorm,
     apply_rotary_emb,
@@ -24,7 +24,7 @@ from modeling.models.model import (
     precompute_freqs_cis,
     validate_left_padded_tokens,
 )
-from modeling.models.utils.segmented_ops import (
+from gumbel_model.utils.segmented_ops import (
     doc_relative_positions,
     is_doc_start_from_doc_idx,
     masked_global_margin_clamped_excess,
@@ -33,7 +33,7 @@ from modeling.models.utils.segmented_ops import (
 )
 
 try:
-    from modeling.models.attention.triton_keybias_flash_attention import keybias_attention as triton_keybias_attention
+    from gumbel_model.attention.triton_keybias_flash_attention import keybias_attention as triton_keybias_attention
 except Exception:
     triton_keybias_attention = None
 
