@@ -161,9 +161,9 @@ class LlmActivationCheckpointMode(StrEnum):
 
 def llm_activation_checkpoint_function(cfg: 'LlmConfig') -> Callable:
     preserve_rng_state = (
-        (cfg.attention_dropout != 0.0) or
-        (cfg.response_residual_dropout != 0.0) or
-        (cfg.residual_dropout != 0.0)
+            (cfg.attention_dropout != 0.0) or
+            (cfg.response_residual_dropout != 0.0) or
+            (cfg.residual_dropout != 0.0)
     )
     from torch.utils.checkpoint import checkpoint
 
@@ -207,12 +207,12 @@ class RopeType(StrEnum):
 
 
 def init_weights(
-    config: LlmConfig,
-    module: Union[nn.Linear, nn.Embedding],
-    d: Optional[int] = None,
-    layer_id: Optional[int] = None,
-    std_factor: float = 1.0,
-    type_of_module: Optional[ModuleType] = None,
+        config: LlmConfig,
+        module: Union[nn.Linear, nn.Embedding],
+        d: Optional[int] = None,
+        layer_id: Optional[int] = None,
+        std_factor: float = 1.0,
+        type_of_module: Optional[ModuleType] = None,
 ) -> None:
     """
     Initialize weights of a linear or embedding module.
@@ -251,9 +251,9 @@ def init_weights(
 
 
 def init_normal(
-    module: Union[nn.Linear, nn.Embedding],
-    std: float,
-    init_cutoff_factor: Optional[float] = None,
+        module: Union[nn.Linear, nn.Embedding],
+        std: float,
+        init_cutoff_factor: Optional[float] = None,
 ):
     # weights
     if init_cutoff_factor is not None:
@@ -663,17 +663,17 @@ class LlmConfig(BaseConfig):
         if strategy is None:
             return False
         elif (
-            (strategy == LlmActivationCheckpointMode.whole_layer)
-            or (strategy == LlmActivationCheckpointMode.one_in_two and block_idx % 2 == 0)
-            or (strategy == LlmActivationCheckpointMode.one_in_three and block_idx % 3 == 0)
-            or (strategy == LlmActivationCheckpointMode.one_in_four and block_idx % 4 == 0)
-            or (strategy == LlmActivationCheckpointMode.two_in_three and block_idx % 3 != 0)
-            or (strategy == LlmActivationCheckpointMode.three_in_four and block_idx % 4 != 0)
+                (strategy == LlmActivationCheckpointMode.whole_layer)
+                or (strategy == LlmActivationCheckpointMode.one_in_two and block_idx % 2 == 0)
+                or (strategy == LlmActivationCheckpointMode.one_in_three and block_idx % 3 == 0)
+                or (strategy == LlmActivationCheckpointMode.one_in_four and block_idx % 4 == 0)
+                or (strategy == LlmActivationCheckpointMode.two_in_three and block_idx % 3 != 0)
+                or (strategy == LlmActivationCheckpointMode.three_in_four and block_idx % 4 != 0)
         ):
             return True
         else:
             return False
- 
+
     @classmethod
     def update_legacy_settings(cls, config):
         """Remove deprecated keys from old checkpoints."""
@@ -711,7 +711,7 @@ class Llm(nn.Module):
                 config.embedding_size or config.vocab_size,
                 bias=config.include_bias,
                 device=device,
-            )
+                )
 
     def reset_parameters(self) -> None:
         if self.config.additional_vocab_size:
@@ -830,13 +830,13 @@ class Llm(nn.Module):
 
 class Embedding(nn.Module):
     def __init__(
-        self,
-        num_embeddings: int,
-        num_new_embeddings: int,
-        features: int,
-        device: Union[str, torch.device],
-        initializer_range: float = 0.02,
-        new_embed_initializer_range: float = 0.02,
+            self,
+            num_embeddings: int,
+            num_new_embeddings: int,
+            features: int,
+            device: Union[str, torch.device],
+            initializer_range: float = 0.02,
+            new_embed_initializer_range: float = 0.02,
     ):
         super().__init__()
         self.initializer_range = initializer_range
@@ -862,11 +862,11 @@ class Embedding(nn.Module):
 
 class Dropout(nn.Dropout):
     def __init__(
-        self,
-        p: float = 0.5,
-        inplace: bool = False,
-        mask_p: float = 0,
-        broadcast_dims: Sequence[int] = (),
+            self,
+            p: float = 0.5,
+            inplace: bool = False,
+            mask_p: float = 0,
+            broadcast_dims: Sequence[int] = (),
     ):
         super().__init__(p, inplace)
         self.mask_p = mask_p
@@ -907,15 +907,15 @@ class Dropout(nn.Dropout):
 
 class LayerNormBase(nn.Module):
     def __init__(
-        self,
-        config: LlmConfig,
-        *,
-        size: Optional[int] = None,
-        elementwise_affine: Optional[bool] = True,
-        eps: float = 1e-05,
-        weight_initializer: Optional[Callable] = torch.ones,
-        bias_initializer: Optional[Callable] = torch.zeros,
-        device=None
+            self,
+            config: LlmConfig,
+            *,
+            size: Optional[int] = None,
+            elementwise_affine: Optional[bool] = True,
+            eps: float = 1e-05,
+            weight_initializer: Optional[Callable] = torch.ones,
+            bias_initializer: Optional[Callable] = torch.zeros,
+            device=None
     ):
         super().__init__()
         self.config = config
@@ -973,12 +973,12 @@ class LayerNorm(LayerNormBase):
     """
 
     def __init__(
-        self,
-        config: LlmConfig,
-        size: Optional[int] = None,
-        low_precision: bool = False,
-        elementwise_affine: Optional[bool] = None,
-        eps: float = 1e-05,
+            self,
+            config: LlmConfig,
+            size: Optional[int] = None,
+            low_precision: bool = False,
+            elementwise_affine: Optional[bool] = None,
+            eps: float = 1e-05,
     ):
         super().__init__(config, size=size, elementwise_affine=elementwise_affine, eps=eps)
         self.low_precision = low_precision
@@ -1005,11 +1005,11 @@ class RMSLayerNorm(LayerNormBase):
     """
 
     def __init__(
-        self,
-        config: LlmConfig,
-        size: Optional[int] = None,
-        elementwise_affine: Optional[bool] = None,
-        eps: float = 1e-5,
+            self,
+            config: LlmConfig,
+            size: Optional[int] = None,
+            elementwise_affine: Optional[bool] = None,
+            eps: float = 1e-5,
     ):
         super().__init__(config, size=size, elementwise_affine=elementwise_affine, eps=eps)
 
@@ -1102,14 +1102,14 @@ class RotaryEmbedding(nn.Module):
         inv_freq_llama = torch.where(is_medium_freq, smoothed_inv_freq, inv_freq_llama)
 
         return inv_freq_llama
-    
+
     def compute_yarn_inv_freq(self, seq_len: int, dim: int, device: torch.device) -> torch.Tensor:
 
         def get_mscale(scale, mscale=1):
             if scale <= 1:
                 return 1.0
             return 0.1 * mscale * math.log(scale) + 1.0
-        
+
         # Compute the inverse frequencies
         def find_correction_dim(num_rotations, dim, base, max_position_embeddings):
             """Inverse dimension formula to find the dimension based on the number of rotations"""
@@ -1131,13 +1131,13 @@ class RotaryEmbedding(nn.Module):
             linear_func = (torch.arange(dim, dtype=torch.float32) - min) / (max - min)
             ramp_func = torch.clamp(linear_func, 0, 1)
             return ramp_func
-        
+
         factor = self.config.rope_factor
         attention_factor = self.config.rope_attention_factor
         mscale = self.config.rope_mscale
         mscale_all_dim = self.config.rope_mscale_all_dim
         original_max_position_embeddings = (
-            self.config.rope_original_max_position_embeddings or self.config.max_position_embeddings
+                self.config.rope_original_max_position_embeddings or self.config.max_position_embeddings
         )
 
         if attention_factor is None:
@@ -1145,14 +1145,14 @@ class RotaryEmbedding(nn.Module):
                 attention_factor = float(get_mscale(factor, mscale) / get_mscale(factor, mscale_all_dim))
             else:
                 attention_factor = get_mscale(factor)
-        
+
         beta_fast = self.config.rope_beta_fast or 32
         beta_slow = self.config.rope_beta_slow or 1
 
         # Note on variable naming: "interpolation" comes from the original technique, where we interpolate the position IDs
         # to expand the possible context length. In other words, interpolation = apply scaling factor.
         pos_freqs = (
-            self.config.rope_theta ** (torch.arange(0, dim, 2, device=device, dtype=torch.float) / dim)
+                self.config.rope_theta ** (torch.arange(0, dim, 2, device=device, dtype=torch.float) / dim)
         )
         inv_freq_extrapolation = 1.0 / pos_freqs
         inv_freq_interpolation = 1.0 / (factor * pos_freqs)
@@ -1169,53 +1169,53 @@ class RotaryEmbedding(nn.Module):
 
         # Get n-dimensional rotational scaling corrected for extrapolation
         inv_freq_extrapolation_factor = (
-            1 - linear_ramp_factor(low, high, dim // 2).to(device=device, dtype=torch.float)
+                1 - linear_ramp_factor(low, high, dim // 2).to(device=device, dtype=torch.float)
         )
         inv_freq = (
-            inv_freq_interpolation * (1 - inv_freq_extrapolation_factor)
-            + inv_freq_extrapolation * inv_freq_extrapolation_factor
+                inv_freq_interpolation * (1 - inv_freq_extrapolation_factor)
+                + inv_freq_extrapolation * inv_freq_extrapolation_factor
         )
-        
+
         return inv_freq, attention_factor
-    
+
     def compute_rope_parameters(
-        self,
-        seq_len: int,
-        dim: int,
-        device: torch.device,
-        rope_type: RopeType,
+            self,
+            seq_len: int,
+            dim: int,
+            device: torch.device,
+            rope_type: RopeType,
     ) -> torch.Tensor:
         if rope_type == RopeType.default:
             inv_freq = 1.0 / (
-                self.config.rope_theta ** (torch.arange(0, dim, 2, device=device, dtype=torch.float) / dim)
+                    self.config.rope_theta ** (torch.arange(0, dim, 2, device=device, dtype=torch.float) / dim)
             )
             attention_factor = 1.0
         elif rope_type == RopeType.llama3:
             inv_freq = 1.0 / (
-                self.config.rope_theta ** (torch.arange(0, dim, 2, device=device, dtype=torch.float) / dim)
+                    self.config.rope_theta ** (torch.arange(0, dim, 2, device=device, dtype=torch.float) / dim)
             )
             inv_freq = self.apply_llama3_scaling_factor(inv_freq)
             attention_factor = 1.0
         else:  # rope_type == RopeType.yarn
             inv_freq, attention_factor = self.compute_yarn_inv_freq(seq_len, dim, device)
-        
+
         return inv_freq, attention_factor
 
     def get_rotary_embedding(
-        self,
-        seq_len: int,
-        device: torch.device,
-        rope_type: Optional[RopeType] = None,
+            self,
+            seq_len: int,
+            device: torch.device,
+            rope_type: Optional[RopeType] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         rope_type = rope_type or self.rope_type
         prefix = f"{str(rope_type)}_" if rope_type != RopeType.default else ""
         sin_key = f"{prefix}rope_pos_sin"
         cos_key = f"{prefix}rope_pos_cos"
         if (
-            (pos_sin := self.__cache.get(sin_key)) is not None
-            and (pos_cos := self.__cache.get(cos_key)) is not None
-            and pos_sin.shape[-2] >= seq_len
-            and pos_cos.shape[-2] >= seq_len
+                (pos_sin := self.__cache.get(sin_key)) is not None
+                and (pos_cos := self.__cache.get(cos_key)) is not None
+                and pos_sin.shape[-2] >= seq_len
+                and pos_cos.shape[-2] >= seq_len
         ):
             if pos_sin.device != device:
                 pos_sin = pos_sin.to(device)
@@ -1247,17 +1247,17 @@ class RotaryEmbedding(nn.Module):
             seq_len: int,
             device: torch.device,
             rope_type: Optional[RopeType] = None,
-            ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         rope_type = rope_type or self.rope_type
         prefix = f"{str(rope_type)}_" if rope_type != RopeType.default else ""
         sin_key = f"cp_{prefix}rope_pos_sin"
         cos_key = f"cp_{prefix}rope_pos_cos"
         if (
-            # (pos_sin := self.__cache.get(f"cp_{prefix}rope_pos_sin")) is not None
-            (pos_sin := self.__cache.get(sin_key)) is not None
-            and (pos_cos := self.__cache.get(cos_key)) is not None
-            and pos_sin.shape[-2] >= seq_len
-            and pos_cos.shape[-2] >= seq_len
+                # (pos_sin := self.__cache.get(f"cp_{prefix}rope_pos_sin")) is not None
+                (pos_sin := self.__cache.get(sin_key)) is not None
+                and (pos_cos := self.__cache.get(cos_key)) is not None
+                and pos_sin.shape[-2] >= seq_len
+                and pos_cos.shape[-2] >= seq_len
         ):
             if pos_sin.device != device:
                 pos_sin = pos_sin.to(device)
@@ -1310,15 +1310,15 @@ class RotaryEmbedding(nn.Module):
         return ((t * pos_cos) + (self.rotate_half(t) * pos_sin)).to(t.dtype)
 
     def forward(
-        self,
-        q: torch.Tensor,
-        k: torch.Tensor,
-        position_ids: Optional[torch.Tensor] = None,
-        head_first: bool = True,
-        cp_enabled: bool = False,
-        pos_sin: Optional[torch.Tensor] = None,
-        pos_cos: Optional[torch.Tensor] = None,
-        freqs_cis: Optional[torch.Tensor] = None,
+            self,
+            q: torch.Tensor,
+            k: torch.Tensor,
+            position_ids: Optional[torch.Tensor] = None,
+            head_first: bool = True,
+            cp_enabled: bool = False,
+            pos_sin: Optional[torch.Tensor] = None,
+            pos_cos: Optional[torch.Tensor] = None,
+            freqs_cis: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Apply RoPE to query (``q``) and key (``k``) matrices.
@@ -1667,14 +1667,14 @@ class OLMoBlock(nn.Module):
         return bias
 
     def _scaled_dot_product_attention(
-        self,
-        q: torch.Tensor,
-        k: torch.Tensor,
-        v: torch.Tensor,
-        attn_mask: Optional[torch.Tensor] = None,
-        drop_mask: Optional[torch.Tensor] = None,
-        dropout_p: float = 0.0,
-        is_causal: bool = False,
+            self,
+            q: torch.Tensor,
+            k: torch.Tensor,
+            v: torch.Tensor,
+            attn_mask: Optional[torch.Tensor] = None,
+            drop_mask: Optional[torch.Tensor] = None,
+            dropout_p: float = 0.0,
+            is_causal: bool = False,
     ) -> torch.Tensor:
         """
         Computes scaled dot product attention on query, key and value tensors, using an optional
@@ -1708,26 +1708,26 @@ class OLMoBlock(nn.Module):
             )
 
     def cp_attention(
-        self,
-        q: torch.Tensor,
-        k: torch.Tensor,
-        v: torch.Tensor,
-        attention_bias: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.Tensor] = None,
-        pos_sin: Optional[torch.Tensor] = None,
-        pos_cos: Optional[torch.Tensor] = None,
-        freqs_cis: Optional[torch.Tensor] = None,
-        cu_doc_lens: Optional[torch.Tensor] = None,
-        cu_doc_lens_q: Optional[torch.Tensor] = None,
-        cu_doc_lens_k: Optional[torch.Tensor] = None,
-        max_doc_len: Optional[int] = None,
-        max_doc_len_q: Optional[int] = None,
-        max_doc_len_k: Optional[int] = None,
-        local_k_slice: Optional[slice] = None,
-        dropout_p: float = 0.0,
-        layer_past: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
-        use_cache: bool = False,
-        scale: Optional[float] = None,
+            self,
+            q: torch.Tensor,
+            k: torch.Tensor,
+            v: torch.Tensor,
+            attention_bias: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.Tensor] = None,
+            pos_sin: Optional[torch.Tensor] = None,
+            pos_cos: Optional[torch.Tensor] = None,
+            freqs_cis: Optional[torch.Tensor] = None,
+            cu_doc_lens: Optional[torch.Tensor] = None,
+            cu_doc_lens_q: Optional[torch.Tensor] = None,
+            cu_doc_lens_k: Optional[torch.Tensor] = None,
+            max_doc_len: Optional[int] = None,
+            max_doc_len_q: Optional[int] = None,
+            max_doc_len_k: Optional[int] = None,
+            local_k_slice: Optional[slice] = None,
+            dropout_p: float = 0.0,
+            layer_past: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+            use_cache: bool = False,
+            scale: Optional[float] = None,
     ) -> torch.Tensor:
         att: torch.Tensor
 
@@ -1825,15 +1825,15 @@ class OLMoBlock(nn.Module):
         else:
             # Fall back to PyTorch's SDPA...
             if any(
-                opt is not None
-                for opt in (
-                    cu_doc_lens,
-                    cu_doc_lens_q,
-                    cu_doc_lens_k,
-                    max_doc_len,
-                    max_doc_len_q,
-                    max_doc_len_k,
-                )
+                    opt is not None
+                    for opt in (
+                            cu_doc_lens,
+                            cu_doc_lens_q,
+                            cu_doc_lens_k,
+                            max_doc_len,
+                            max_doc_len_q,
+                            max_doc_len_k,
+                    )
             ):
                 raise RuntimeError(
                     f"{self.__class__.__name__} requires flash-attn (use_flash=True) for intra-document masking"
@@ -1864,16 +1864,16 @@ class OLMoBlock(nn.Module):
         return att, present
 
     def attention(
-        self,
-        q: torch.Tensor,
-        k: torch.Tensor,
-        v: torch.Tensor,
-        attention_bias: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.Tensor] = None,
-        drop_mask: Optional[torch.Tensor] = None,
-        layer_past: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
-        use_cache: bool = False,
-        value_scaling=None
+            self,
+            q: torch.Tensor,
+            k: torch.Tensor,
+            v: torch.Tensor,
+            attention_bias: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.Tensor] = None,
+            drop_mask: Optional[torch.Tensor] = None,
+            layer_past: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+            use_cache: bool = False,
+            value_scaling=None
     ) -> Tuple[torch.Tensor, Optional[Tuple[torch.Tensor, torch.Tensor]]]:
         B, T, C = q.size()  # batch size, sequence length, d_model
         dtype = k.dtype
@@ -1941,13 +1941,13 @@ class OLMoBlock(nn.Module):
 
     @abstractmethod
     def forward(
-        self,
-        x: torch.Tensor,
-        attention_bias: Optional[torch.FloatTensor] = None,
-        position_ids: Optional[torch.Tensor] = None,
-        drop_mask: Optional[torch.Tensor] = None,
-        layer_past: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
-        use_cache: bool = False,
+            self,
+            x: torch.Tensor,
+            attention_bias: Optional[torch.FloatTensor] = None,
+            position_ids: Optional[torch.Tensor] = None,
+            drop_mask: Optional[torch.Tensor] = None,
+            layer_past: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+            use_cache: bool = False,
     ) -> Tuple[torch.Tensor, Optional[Tuple[torch.Tensor, torch.Tensor]]]:
         raise NotImplementedError
 
@@ -1964,11 +1964,11 @@ class OLMoBlock(nn.Module):
         return module
 
     def apply_cp(
-        self,
-        cp_mesh: DeviceMesh,
-        load_balancer: CPLoadBalancerType,
-        head_stride: int = 1,
-        attention_type: str = "ulysses",
+            self,
+            cp_mesh: DeviceMesh,
+            load_balancer: CPLoadBalancerType,
+            head_stride: int = 1,
+            attention_type: str = "ulysses",
     ):
         self._cp_pg = cp_mesh.get_group()
         self._cp_load_balancer = load_balancer
@@ -1981,6 +1981,286 @@ class OLMoBlock(nn.Module):
                 scatter_idx=2,
                 gather_idx=1
             )
+
+class OLMoGumbelBlock(OLMoBlock):
+    """
+    This is a Gumbel-Beacon transformer block
+    """
+
+    def __init__(self, layer_id: int, config: LlmConfig, cache: BufferCache, device=None):
+        super().__init__(layer_id, config, cache, device)
+        # Layer norms.
+        self.attn_norm = LayerNorm.build(config)
+        self.ff_norm = LayerNorm.build(config)
+        # Attention input projection. Projects x -> (q, k, v)
+
+        self.fused_dims = (
+            config.n_heads * self.head_dim,
+            config.effective_n_kv_heads * self.head_dim,
+            config.effective_n_kv_heads * self.head_dim,
+        )
+        self.att_proj = nn.Linear(
+            config.d_model, sum(self.fused_dims),
+            bias=config.include_bias or config.qkv_bias,
+            device=device
+        )
+        # Feed-forward input projection.
+        self.ff_proj = nn.Linear(
+            config.d_model, self.hidden_size, bias=config.include_bias, device=device)
+
+    def reset_parameters(self):
+        super().reset_parameters()
+        self.attn_norm.reset_parameters()
+        self.ff_norm.reset_parameters()
+        # NOTE: the standard deviation for these weights does not depend on the layer.
+        init_weights(
+            self.config, self.att_proj, d=self.config.d_model, layer_id=None, type_of_module=ModuleType.in_module
+        )
+        init_weights(
+            self.config, self.ff_proj, d=self.config.d_model, layer_id=None, type_of_module=ModuleType.in_module
+        )
+
+    def forward(
+            self,
+            x: torch.Tensor,
+            attention_bias: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.Tensor] = None,
+            drop_mask: Optional[torch.Tensor] = None,
+            layer_past: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+            value_scaling: Optional[torch.Tensor] = None,
+            use_cache: bool = False,
+            pos_sin: Optional[torch.Tensor] = None,
+            pos_cos: Optional[torch.Tensor] = None,
+            freqs_cis: Optional[torch.Tensor] = None,
+    ) -> Tuple[torch.Tensor, Optional[Tuple[torch.Tensor, torch.Tensor]]]:
+        # Get query, key, value projections.
+        # shape:
+        #  - for regular attn q, k, v: (batch_size, seq_len, d_model)
+        #  - for multi-query attn q: (batch_size, seq_len, d_model)
+        #                      k, v: (batch_size, seq_len, d_model // n_heads)
+        #  - for group query attn q: (batch_size, seq_len, d_model)
+        #                      k, v: (batch_size, seq_len, d_model // n_kv_heads)
+        enable_cp = getattr(self, '_cp_enabled', False) and not use_cache
+        if not self.config.norm_after:
+            if self.fine_grained_checkpoint_fn is not None:
+                atten_in = self.fine_grained_checkpoint_fn(self.attn_norm, x)
+            else:
+                atten_in = self.attn_norm(x)
+        else:
+            atten_in = x
+        qkv = self.att_proj(atten_in)
+
+        if self.config.clip_qkv is not None:
+            qkv.clamp_(min=-self.config.clip_qkv, max=self.config.clip_qkv)
+
+        q, k, v = qkv.split(self.fused_dims, dim=-1)
+
+        if enable_cp:
+            att, cache = self.cp_attention(
+                q,
+                k,
+                v,
+                position_ids=position_ids,
+                pos_sin=pos_sin,
+                pos_cos=pos_cos,
+                freqs_cis=freqs_cis,
+                attention_bias=attention_bias,
+                layer_past=layer_past,
+                use_cache=use_cache,
+            )
+
+        else:
+            # Get attention scores.
+            if self.fine_grained_checkpoint_fn is not None:
+                att, cache = self.fine_grained_checkpoint_fn(  # type: ignore
+                    self.attention, q, k, v, attention_bias, position_ids=position_ids,
+                    drop_mask=drop_mask, layer_past=layer_past, use_cache=use_cache,
+                    value_scaling=value_scaling
+                )
+            else:
+                att, cache = self.attention(
+                    q, k, v, attention_bias, position_ids=position_ids, drop_mask=drop_mask,
+                    layer_past=layer_past, use_cache=use_cache, value_scaling=value_scaling)
+
+        if self.config.norm_after:
+            if self.fine_grained_checkpoint_fn is not None:
+                att = self.fine_grained_checkpoint_fn(self.attn_norm, att)
+            else:
+                att = self.attn_norm(att)
+
+        # Add attention scores.
+        # shape: (B, T, C)
+        x = x + self.dropout(att, drop_mask=drop_mask)
+
+        # Add feed-forward projection.
+        # shape: (batch_size, seq_len, d_model)
+        og_x = x
+
+        if not self.config.norm_after:
+            if self.fine_grained_checkpoint_fn is not None:
+                x = self.fine_grained_checkpoint_fn(self.ff_norm, x)  # type: ignore
+            else:
+                x = self.ff_norm(x)
+
+        x = self.ff_proj(x)
+        if self.fine_grained_checkpoint_fn is not None:
+            x = self.fine_grained_checkpoint_fn(self.act, x)  # type: ignore
+        else:
+            x = self.act(x)
+        x = self.ff_out(x)
+
+        if self.config.norm_after:
+            if self.fine_grained_checkpoint_fn is not None:
+                x = self.fine_grained_checkpoint_fn(self.ff_norm, x)  # type: ignore
+            else:
+                x = self.ff_norm(x)
+
+        x = self.dropout(x, drop_mask=drop_mask)
+        x = og_x + x
+
+        return x, cache
+
+
+
+class OLMoSequentialBlock(OLMoBlock):
+    """
+    This is a typical transformer block where the output is computed as ``MLP(LN(x + Attention(LN(x))))``
+    (plus another skip connection).
+    """
+
+    def __init__(self, layer_id: int, config: LlmConfig, cache: BufferCache, device=None):
+        super().__init__(layer_id, config, cache, device)
+        # Layer norms.
+        self.attn_norm = LayerNorm.build(config)
+        self.ff_norm = LayerNorm.build(config)
+        # Attention input projection. Projects x -> (q, k, v)
+
+        self.fused_dims = (
+            config.n_heads * self.head_dim,
+            config.effective_n_kv_heads * self.head_dim,
+            config.effective_n_kv_heads * self.head_dim,
+        )
+        self.att_proj = nn.Linear(
+            config.d_model, sum(self.fused_dims),
+            bias=config.include_bias or config.qkv_bias,
+            device=device
+        )
+        # Feed-forward input projection.
+        self.ff_proj = nn.Linear(
+            config.d_model, self.hidden_size, bias=config.include_bias, device=device)
+
+    def reset_parameters(self):
+        super().reset_parameters()
+        self.attn_norm.reset_parameters()
+        self.ff_norm.reset_parameters()
+        # NOTE: the standard deviation for these weights does not depend on the layer.
+        init_weights(
+            self.config, self.att_proj, d=self.config.d_model, layer_id=None, type_of_module=ModuleType.in_module
+        )
+        init_weights(
+            self.config, self.ff_proj, d=self.config.d_model, layer_id=None, type_of_module=ModuleType.in_module
+        )
+
+    def forward(
+            self,
+            x: torch.Tensor,
+            attention_bias: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.Tensor] = None,
+            drop_mask: Optional[torch.Tensor] = None,
+            layer_past: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+            value_scaling: Optional[torch.Tensor] = None,
+            use_cache: bool = False,
+            pos_sin: Optional[torch.Tensor] = None,
+            pos_cos: Optional[torch.Tensor] = None,
+            freqs_cis: Optional[torch.Tensor] = None,
+    ) -> Tuple[torch.Tensor, Optional[Tuple[torch.Tensor, torch.Tensor]]]:
+        # Get query, key, value projections.
+        # shape:
+        #  - for regular attn q, k, v: (batch_size, seq_len, d_model)
+        #  - for multi-query attn q: (batch_size, seq_len, d_model)
+        #                      k, v: (batch_size, seq_len, d_model // n_heads)
+        #  - for group query attn q: (batch_size, seq_len, d_model)
+        #                      k, v: (batch_size, seq_len, d_model // n_kv_heads)
+        enable_cp = getattr(self, '_cp_enabled', False) and not use_cache
+        if not self.config.norm_after:
+            if self.fine_grained_checkpoint_fn is not None:
+                atten_in = self.fine_grained_checkpoint_fn(self.attn_norm, x)
+            else:
+                atten_in = self.attn_norm(x)
+        else:
+            atten_in = x
+        qkv = self.att_proj(atten_in)
+
+        if self.config.clip_qkv is not None:
+            qkv.clamp_(min=-self.config.clip_qkv, max=self.config.clip_qkv)
+
+        q, k, v = qkv.split(self.fused_dims, dim=-1)
+
+        if enable_cp:
+            att, cache = self.cp_attention(
+                q,
+                k,
+                v,
+                position_ids=position_ids,
+                pos_sin=pos_sin,
+                pos_cos=pos_cos,
+                freqs_cis=freqs_cis,
+                attention_bias=attention_bias,
+                layer_past=layer_past,
+                use_cache=use_cache,
+            )
+
+        else:
+            # Get attention scores.
+            if self.fine_grained_checkpoint_fn is not None:
+                att, cache = self.fine_grained_checkpoint_fn(  # type: ignore
+                    self.attention, q, k, v, attention_bias, position_ids=position_ids,
+                    drop_mask=drop_mask, layer_past=layer_past, use_cache=use_cache,
+                    value_scaling=value_scaling
+                )
+            else:
+                att, cache = self.attention(
+                    q, k, v, attention_bias, position_ids=position_ids, drop_mask=drop_mask,
+                    layer_past=layer_past, use_cache=use_cache, value_scaling=value_scaling)
+
+        if self.config.norm_after:
+            if self.fine_grained_checkpoint_fn is not None:
+                att = self.fine_grained_checkpoint_fn(self.attn_norm, att)
+            else:
+                att = self.attn_norm(att)
+
+        # Add attention scores.
+        # shape: (B, T, C)
+        x = x + self.dropout(att, drop_mask=drop_mask)
+
+        # Add feed-forward projection.
+        # shape: (batch_size, seq_len, d_model)
+        og_x = x
+
+        if not self.config.norm_after:
+            if self.fine_grained_checkpoint_fn is not None:
+                x = self.fine_grained_checkpoint_fn(self.ff_norm, x)  # type: ignore
+            else:
+                x = self.ff_norm(x)
+
+        x = self.ff_proj(x)
+        if self.fine_grained_checkpoint_fn is not None:
+            x = self.fine_grained_checkpoint_fn(self.act, x)  # type: ignore
+        else:
+            x = self.act(x)
+        x = self.ff_out(x)
+
+        if self.config.norm_after:
+            if self.fine_grained_checkpoint_fn is not None:
+                x = self.fine_grained_checkpoint_fn(self.ff_norm, x)  # type: ignore
+            else:
+                x = self.ff_norm(x)
+
+        x = self.dropout(x, drop_mask=drop_mask)
+        x = og_x + x
+
+        return x, cache
+
 
 class OLMoEBlock(OLMoBlock):
     """
@@ -2050,15 +2330,15 @@ class OLMoEBlock(OLMoBlock):
         init_normal(self.ffn.router.layer, std=in_std, init_cutoff_factor=cutoff_factor)
 
     def forward(
-        self,
-        x: torch.Tensor,
-        attention_bias: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.Tensor] = None,
-        drop_mask: Optional[torch.Tensor] = None,
-        layer_past: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
-        use_cache: bool = False,
-        max_doc_len: Optional[int] = None,
-        cu_doc_lens: Optional[torch.Tensor] = None,
+            self,
+            x: torch.Tensor,
+            attention_bias: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.Tensor] = None,
+            drop_mask: Optional[torch.Tensor] = None,
+            layer_past: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+            use_cache: bool = False,
+            max_doc_len: Optional[int] = None,
+            cu_doc_lens: Optional[torch.Tensor] = None,
     ) -> Tuple[torch.Tensor, Optional[Tuple[torch.Tensor, torch.Tensor]]]:
         # Get query, key, value projections.
         # shape:
@@ -2138,146 +2418,6 @@ class OLMoEBlock(OLMoBlock):
             # Activation checkpointing for the MoE FFN is not supported
             return og_x + self.dropout(self.ffn(x), drop_mask=drop_mask), cache
 
-
-class OLMoSequentialBlock(OLMoBlock):
-    """
-    This is a typical transformer block where the output is computed as ``MLP(LN(x + Attention(LN(x))))``
-    (plus another skip connection).
-    """
-
-    def __init__(self, layer_id: int, config: LlmConfig, cache: BufferCache, device=None):
-        super().__init__(layer_id, config, cache, device)
-        # Layer norms.
-        self.attn_norm = LayerNorm.build(config)
-        self.ff_norm = LayerNorm.build(config)
-        # Attention input projection. Projects x -> (q, k, v)
-
-        self.fused_dims = (
-            config.n_heads * self.head_dim,
-            config.effective_n_kv_heads * self.head_dim,
-            config.effective_n_kv_heads * self.head_dim,
-        )
-        self.att_proj = nn.Linear(
-            config.d_model, sum(self.fused_dims),
-            bias=config.include_bias or config.qkv_bias,
-            device=device
-        )
-        # Feed-forward input projection.
-        self.ff_proj = nn.Linear(
-            config.d_model, self.hidden_size, bias=config.include_bias, device=device)
-
-    def reset_parameters(self):
-        super().reset_parameters()
-        self.attn_norm.reset_parameters()
-        self.ff_norm.reset_parameters()
-        # NOTE: the standard deviation for these weights does not depend on the layer.
-        init_weights(
-            self.config, self.att_proj, d=self.config.d_model, layer_id=None, type_of_module=ModuleType.in_module
-        )
-        init_weights(
-            self.config, self.ff_proj, d=self.config.d_model, layer_id=None, type_of_module=ModuleType.in_module
-        )
-
-    def forward(
-        self,
-        x: torch.Tensor,
-        attention_bias: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.Tensor] = None,
-        drop_mask: Optional[torch.Tensor] = None,
-        layer_past: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
-        value_scaling: Optional[torch.Tensor] = None,
-        use_cache: bool = False,
-        pos_sin: Optional[torch.Tensor] = None,
-        pos_cos: Optional[torch.Tensor] = None,
-        freqs_cis: Optional[torch.Tensor] = None,
-    ) -> Tuple[torch.Tensor, Optional[Tuple[torch.Tensor, torch.Tensor]]]:
-        # Get query, key, value projections.
-        # shape:
-        #  - for regular attn q, k, v: (batch_size, seq_len, d_model)
-        #  - for multi-query attn q: (batch_size, seq_len, d_model)
-        #                      k, v: (batch_size, seq_len, d_model // n_heads)
-        #  - for group query attn q: (batch_size, seq_len, d_model)
-        #                      k, v: (batch_size, seq_len, d_model // n_kv_heads)
-        enable_cp = getattr(self, '_cp_enabled', False) and not use_cache
-        if not self.config.norm_after:
-            if self.fine_grained_checkpoint_fn is not None:
-                atten_in = self.fine_grained_checkpoint_fn(self.attn_norm, x)
-            else:
-                atten_in = self.attn_norm(x)
-        else:
-            atten_in = x
-        qkv = self.att_proj(atten_in)
-
-        if self.config.clip_qkv is not None:
-            qkv.clamp_(min=-self.config.clip_qkv, max=self.config.clip_qkv)
-
-        q, k, v = qkv.split(self.fused_dims, dim=-1)
- 
-        if enable_cp:
-            att, cache = self.cp_attention(
-                q,
-                k,
-                v,
-                position_ids=position_ids,
-                pos_sin=pos_sin,
-                pos_cos=pos_cos,
-                freqs_cis=freqs_cis,
-                attention_bias=attention_bias,
-                layer_past=layer_past,
-                use_cache=use_cache,
-            )
-        else:
-            # Get attention scores.
-            if self.fine_grained_checkpoint_fn is not None:
-                att, cache = self.fine_grained_checkpoint_fn(  # type: ignore
-                    self.attention, q, k, v, attention_bias, position_ids=position_ids,
-                    drop_mask=drop_mask, layer_past=layer_past, use_cache=use_cache,
-                    value_scaling=value_scaling
-                )
-            else:
-                att, cache = self.attention(
-                    q, k, v, attention_bias, position_ids=position_ids, drop_mask=drop_mask,
-                    layer_past=layer_past, use_cache=use_cache, value_scaling=value_scaling)
-
-        if self.config.norm_after:
-            if self.fine_grained_checkpoint_fn is not None:
-                att = self.fine_grained_checkpoint_fn(self.attn_norm, att)
-            else:
-                att = self.attn_norm(att)
-
-        # Add attention scores.
-        # shape: (B, T, C)
-        x = x + self.dropout(att, drop_mask=drop_mask)
-
-        # Add feed-forward projection.
-        # shape: (batch_size, seq_len, d_model)
-        og_x = x
-
-        if not self.config.norm_after:
-            if self.fine_grained_checkpoint_fn is not None:
-                x = self.fine_grained_checkpoint_fn(self.ff_norm, x)  # type: ignore
-            else:
-                x = self.ff_norm(x)
-
-        x = self.ff_proj(x)
-        if self.fine_grained_checkpoint_fn is not None:
-            x = self.fine_grained_checkpoint_fn(self.act, x)  # type: ignore
-        else:
-            x = self.act(x)
-        x = self.ff_out(x)
-
-        if self.config.norm_after:
-            if self.fine_grained_checkpoint_fn is not None:
-                x = self.fine_grained_checkpoint_fn(self.ff_norm, x)  # type: ignore
-            else:
-                x = self.ff_norm(x)
-
-        x = self.dropout(x, drop_mask=drop_mask)
-        x = og_x + x
-
-        return x, cache
-
-
 class OLMoLlamaBlock(OLMoBlock):
     """
     This is a transformer block where the output is computed as ``MLP(LN(x + Attention(LN(x))))``
@@ -2330,15 +2470,15 @@ class OLMoLlamaBlock(OLMoBlock):
         init_weights(self.config, self.ff_proj2, d=self.config.d_model, layer_id=None)
 
     def _scaled_dot_product_attention(
-        self,
-        q: torch.Tensor,
-        k: torch.Tensor,
-        v: torch.Tensor,
-        attn_mask: Optional[torch.Tensor] = None,
-        drop_mask: Optional[torch.Tensor] = None,
-        dropout_p: float = 0.0,
-        response_dropout_p: float = 0.0,
-        is_causal: bool = False,
+            self,
+            q: torch.Tensor,
+            k: torch.Tensor,
+            v: torch.Tensor,
+            attn_mask: Optional[torch.Tensor] = None,
+            drop_mask: Optional[torch.Tensor] = None,
+            dropout_p: float = 0.0,
+            response_dropout_p: float = 0.0,
+            is_causal: bool = False,
     ) -> torch.Tensor:
         # For GQA
         assert k.size(1) == v.size(1)
@@ -2394,13 +2534,13 @@ class OLMoLlamaBlock(OLMoBlock):
         return att
 
     def forward(
-        self,
-        x: torch.Tensor,
-        attention_bias: Optional[torch.Tensor] = None,
-        position_ids: Optional[torch.Tensor] = None,
-        drop_mask: Optional[torch.Tensor] = None,
-        layer_past: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
-        use_cache: bool = False,
+            self,
+            x: torch.Tensor,
+            attention_bias: Optional[torch.Tensor] = None,
+            position_ids: Optional[torch.Tensor] = None,
+            drop_mask: Optional[torch.Tensor] = None,
+            layer_past: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+            use_cache: bool = False,
     ) -> Tuple[torch.Tensor, Optional[Tuple[torch.Tensor, torch.Tensor]]]:
         # Get query, key, value projections.
         # shape:
