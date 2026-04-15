@@ -2101,7 +2101,7 @@ class OLMoGumbelBlock(OLMoBlock):
         # (normal_0, beacon_0, normal_1, beacon_1, ...).
         #
         # Only the dense Triton gumbel sliding attention path is implemented for now.
-        # TODO: add the beacons in llm.py?
+        # TODO: add the beacons in llm.py? Add a beacon token at the first pad token and refer to that. Add the IDs here
         B, two_t, C = x.shape
         if two_t % 2 != 0:
             raise ValueError(f"Expected doubled sequence length 2T, got T={two_t}.")
@@ -2229,6 +2229,7 @@ class OLMoGumbelBlock(OLMoBlock):
 
         # Triton fused attention with gumbel sliding bias.
         #TODO: document idx creation / handling
+        # random vectors as init and documents_idx_BxT
         sm_scale = 1.0 / math.sqrt(q.shape[-1])
         att = triton_gumbel_sliding_attention(
             q,
